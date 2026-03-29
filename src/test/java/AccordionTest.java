@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import pageobjects.MainPage;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +17,7 @@ public class AccordionTest {
 
     @BeforeEach
     public void setUp() {
+        WebDriverManager.chromedriver().setup();
         driver = new ChromeDriver();
         driver.manage().window().maximize();
         driver.get(BASE_URL);

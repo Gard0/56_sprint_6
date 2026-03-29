@@ -4,6 +4,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import io.github.bonigarcia.wdm.WebDriverManager;
 import pageobjects.MainPage;
 import pageobjects.OrderPage;
 
@@ -17,6 +18,7 @@ public class OrderTest {
 
     @BeforeEach
     public void setUp() {
+        WebDriverManager.chromedriver().setup();
         driver = new ChromeDriver();
         driver.manage().window().maximize();
         driver.get(BASE_URL);
@@ -31,28 +33,50 @@ public class OrderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "Иван,Петров,Москва улица Ленина 5,Красная площадь,+79991234567,1",
-            "Мария,Сидорова,Санкт-Петербург Невский проспект 10,Невский проспект,+79997654321,2"
+            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,1 день"
     })
     public void testOrderFlowFromTopButton(String name, String lastName, String address,
-                                            String metro, String phone, String duration) {
+                                            String metro, String phone, String date, String duration) {
         // Нажать на кнопку "Заказать" вверху
         mainPage.clickOrderButtonTop();
+
+        // Дождаться загрузки модального окна формы
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         // Инициализировать страницу заказа
         orderPage = new OrderPage(driver);
 
-        // Заполнить форму первым набором данных
+        // === ПЕРВАЯ ЧАСТЬ ФОРМЫ ===
+        // Заполнить первую часть формы
         orderPage.fillName(name);
         orderPage.fillLastName(lastName);
         orderPage.fillAddress(address);
         orderPage.fillMetro(metro);
         orderPage.fillPhone(phone);
+
+        // Нажать кнопку "Далее"
+        orderPage.clickNextButton();
+
+        // Дождаться загрузки второй части формы
+        try {
+            Thread.sleep(800);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // === ВТОРАЯ ЧАСТЬ ФОРМЫ ===
+        // Заполнить вторую часть формы
+        orderPage.fillDeliveryDate(date);
         orderPage.selectRentalDuration(duration);
         orderPage.acceptTerms();
 
         // Отправить форму
         orderPage.submitOrder();
+        orderPage.confirmOrder();
 
         // Проверить успешное создание заказа
         assertTrue(orderPage.isSuccessMessageDisplayed(),
@@ -61,28 +85,50 @@ public class OrderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "Иван,Петров,Москва улица Ленина 5,Красная площадь,+79991234567,1",
-            "Мария,Сидорова,Санкт-Петербург Невский проспект 10,Невский проспект,+79997654321,2"
+            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,1 день"
     })
     public void testOrderFlowFromBottomButton(String name, String lastName, String address,
-                                               String metro, String phone, String duration) {
+                                               String metro, String phone, String date, String duration) {
         // Нажать на кнопку "Заказать" внизу
         mainPage.clickOrderButtonBottom();
+
+        // Дождаться загрузки модального окна формы
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         // Инициализировать страницу заказа
         orderPage = new OrderPage(driver);
 
-        // Заполнить форму первым набором данных
+        // === ПЕРВАЯ ЧАСТЬ ФОРМЫ ===
+        // Заполнить первую часть формы
         orderPage.fillName(name);
         orderPage.fillLastName(lastName);
         orderPage.fillAddress(address);
         orderPage.fillMetro(metro);
         orderPage.fillPhone(phone);
+
+        // Нажать кнопку "Далее"
+        orderPage.clickNextButton();
+
+        // Дождаться загрузки второй части формы
+        try {
+            Thread.sleep(800);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // === ВТОРАЯ ЧАСТЬ ФОРМЫ ===
+        // Заполнить вторую часть формы
+        orderPage.fillDeliveryDate(date);
         orderPage.selectRentalDuration(duration);
         orderPage.acceptTerms();
 
         // Отправить форму
         orderPage.submitOrder();
+        orderPage.confirmOrder();
 
         // Проверить успешное создание заказа
         assertTrue(orderPage.isSuccessMessageDisplayed(),
