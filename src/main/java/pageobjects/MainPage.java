@@ -6,7 +6,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.JavascriptExecutor;
-import java.util.concurrent.TimeUnit;
+// import java.util.concurrent.TimeUnit;
 import java.time.Duration;
 
 public class MainPage {
@@ -36,7 +36,7 @@ public class MainPage {
     private final By yandexLogo = By.xpath("//a[contains(@href, 'yandex.ru')]//img");
 
     // Кнопка закрытия cookie consent баннера
-    private final By cookieCloseButton = By.xpath("//button[text()='Да все привыкли']");
+    private final By cookieCloseButton = By.xpath("//*[@id='rcc-confirm-button'] | //button[contains(translate(.,'АВЕПРИВКЛИ','авепривкли'),'да все привыкли')]");
 
     public MainPage(WebDriver driver) {
         this.driver = driver;

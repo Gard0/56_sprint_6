@@ -4,6 +4,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.firefox.FirefoxDriver;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import pageobjects.MainPage;
 import pageobjects.OrderPage;
@@ -18,8 +19,17 @@ public class OrderTest {
 
     @BeforeEach
     public void setUp() {
-        WebDriverManager.chromedriver().setup();
-        driver = new ChromeDriver();
+        String browser = System.getProperty("browser", "firefox").toLowerCase();
+        switch (browser) {
+            case "chrome":
+                WebDriverManager.chromedriver().setup();
+                driver = new ChromeDriver();
+                break;
+            default:
+                WebDriverManager.firefoxdriver().setup();
+                driver = new FirefoxDriver();
+                break;
+        }
         driver.manage().window().maximize();
         driver.get(BASE_URL);
         mainPage = new MainPage(driver);
@@ -33,7 +43,8 @@ public class OrderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,1 день"
+            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,сутки",
+            "Мария,Иванова,Санкт-Петербург Невский 10,Балтийская,+79161234567,30.03.2026,двое суток"
     })
     public void testOrderFlowFromTopButton(String name, String lastName, String address,
                                             String metro, String phone, String date, String duration) {
@@ -72,6 +83,7 @@ public class OrderTest {
         // Заполнить вторую часть формы
         orderPage.fillDeliveryDate(date);
         orderPage.selectRentalDuration(duration);
+        orderPage.selectFirstColor();
         orderPage.acceptTerms();
 
         // Отправить форму
@@ -85,7 +97,8 @@ public class OrderTest {
 
     @ParameterizedTest
     @CsvSource({
-            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,1 день"
+            "Иван,Петров,Москва улица Ленина 5,Черкизовская,+79991234567,23.04.2026,сутки",
+            "Мария,Иванова,Санкт-Петербург Невский 10,Балтийская,+79161234567,30.03.2026,двое суток"
     })
     public void testOrderFlowFromBottomButton(String name, String lastName, String address,
                                                String metro, String phone, String date, String duration) {
@@ -124,6 +137,7 @@ public class OrderTest {
         // Заполнить вторую часть формы
         orderPage.fillDeliveryDate(date);
         orderPage.selectRentalDuration(duration);
+        orderPage.selectFirstColor();
         orderPage.acceptTerms();
 
         // Отправить форму

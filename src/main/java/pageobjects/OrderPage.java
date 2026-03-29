@@ -7,6 +7,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.interactions.Actions;
 import java.time.Duration;
 
 public class OrderPage {
@@ -41,20 +42,29 @@ public class OrderPage {
     private final By rentalDropdown = By.cssSelector(".Dropdown-control");
     private final By rentalOptions = By.cssSelector(".Dropdown-menu .Dropdown-option");
 
+    // Чекбоксы выбора цвета самоката (берём первый доступный)
+    private final By colorCheckboxes = By.cssSelector("input[type='checkbox']");
+
     // Чекбокс "Принимание условий" - ищем чекбокс с типом checkbox
     private final By checkboxTerms = By.xpath("//label//input[@type='checkbox'] | //input[@type='checkbox']//ancestor::label");
 
     // Кнопка "Заказать" - более универсальный селектор
-    private final By orderSubmitButton = By.xpath("//button[contains(text(), 'Заказать')] | //button[contains(., 'Заказать')]");
+    private final By orderSubmitButton = By.xpath(
+            "/html/body/div/div/div[2]/div[3]/button[2]"
+                    + " | //button[contains(normalize-space(),'Заказать')]");
 
     // Кнопка "Далее" в первой части формы
     private final By nextButton = By.xpath("//*[@id='root']/div/div[2]/div[3]/button");
 
     // Сообщение об успешном создании заказа
     private final By successMessage = By.xpath(
-            "//*[contains(@class,'Modal') and (contains(text(),'Заказ') or contains(text(),'Статус'))]"
-            + " | //button[contains(.,'Посмотреть статус')]");
-    private final By confirmYesButton = By.xpath("//button[contains(.,'Да') or contains(translate(.,'YES','yes'),'yes') or contains(@class,'Yes')]");
+            "//*[contains(@class,'Order_ModalHeader') or contains(text(),'Заказ оформлен') or contains(text(),'Заказ создан')]");
+    // Модалка подтверждения и кнопка "Да"
+    private final By confirmModal = By.xpath("//*[contains(text(),'Хотите оформить заказ')]");
+    private final By confirmYesButton = By.xpath("/html/body/div/div/div[2]/div[5]/div[2]/button[2]"
+            + " | //button[contains(normalize-space(),'Да')]"
+            + " | //button[contains(translate(.,'YES','yes'),'yes')]"
+            + " | //button[contains(@class,'Order_Buttons__1xGrp')][last()]");
 
     public OrderPage(WebDriver driver) {
         this.driver = driver;
@@ -188,8 +198,14 @@ public class OrderPage {
             WebElement dropdown = wait.until(ExpectedConditions.elementToBeClickable(rentalDropdown));
             ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", dropdown);
             dropdown.click();
-            By firstOptionLocator = By.cssSelector(".Dropdown-menu .Dropdown-option");
-            WebElement option = wait.until(ExpectedConditions.presenceOfElementLocated(firstOptionLocator));
+            By optionLocator = By.xpath("//div[contains(@class,'Dropdown-option')][contains(.,'" + duration + "')]");
+            WebElement option;
+            try {
+                option = wait.until(ExpectedConditions.presenceOfElementLocated(optionLocator));
+            } catch (Exception e) {
+                option = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".Dropdown-menu .Dropdown-option")));
+            }
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", option);
             ((JavascriptExecutor) driver).executeScript("arguments[0].click();", option);
             System.out.println("[" + methodName + "] Duration selected successfully");
         } catch (Exception e) {
@@ -239,10 +255,36 @@ public class OrderPage {
         String methodName = "submitOrder";
         System.out.println("[" + methodName + "] Starting to submit order");
         try {
-            WebElement button = wait.until(ExpectedConditions.elementToBeClickable(orderSubmitButton));
-            System.out.println("[" + methodName + "] Found submit button, clicking via JS");
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
-            System.out.println("[" + methodName + "] Order submitted successfully");
+            WebElement button = wait.until(ExpectedConditions.presenceOfElementLocated(orderSubmitButton));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView({block:'center'});", button);
+            wait.until(ExpectedConditions.elementToBeClickable(button));
+            try {
+                button.click();
+            } catch (Exception clickEx) {
+                System.out.println("[" + methodName + "] direct click failed, trying JS");
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", button);
+            }
+            // ждём быструю реакцию: либо модалка, либо редирект
+            boolean appeared = false;
+            try {
+                new WebDriverWait(driver, Duration.ofSeconds(8)).until(
+                        ExpectedConditions.or(
+                                ExpectedConditions.presenceOfElementLocated(confirmYesButton),
+                                ExpectedConditions.urlContains("/track")));
+                appeared = true;
+            } catch (Exception ignore) {
+                // ничего не появилось — попробуем повторно кликнуть через JS
+                try {
+                    ((JavascriptExecutor) driver).executeScript(
+                            "const btn=document.evaluate(\"/html/body/div/div/div[2]/div[3]/button[2]\",document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue; if(btn){btn.click(); return true;} const cand=document.querySelectorAll('button'); for(const b of cand){if(/заказать/i.test(b.textContent)){b.click(); return true;}} return false;");
+                    new WebDriverWait(driver, Duration.ofSeconds(5)).until(
+                            ExpectedConditions.presenceOfElementLocated(confirmYesButton));
+                    appeared = true;
+                } catch (Exception ignored) {
+                    appeared = false;
+                }
+            }
+            System.out.println("[" + methodName + "] Order submit clicked, modal appeared=" + appeared);
         } catch (Exception e) {
             System.out.println("[" + methodName + "] ERROR: " + e.getMessage());
             e.printStackTrace();
@@ -250,41 +292,69 @@ public class OrderPage {
         }
     }
 
+    // Выбрать любой цвет самоката (первый чекбокс)
+    public void selectFirstColor() {
+        String methodName = "selectFirstColor";
+        System.out.println("[" + methodName + "] Selecting first color");
+        try {
+            WebElement color = wait.until(ExpectedConditions.elementToBeClickable(colorCheckboxes));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", color);
+            if (!color.isSelected()) {
+                color.click();
+            }
+            System.out.println("[" + methodName + "] Color selected");
+        } catch (Exception e) {
+            System.out.println("[" + methodName + "] ERROR: " + e.getMessage());
+            // не критично, продолжаем без цвета
+        }
+    }
+
     // Подтвердить создание заказа в модальном окне
+        // ÐŸÐ¾Ð´Ñ‚Ð²ÐµÑ€Ð´Ð¸Ñ‚ÑŒ ÑÐ¾Ð·Ð´Ð°Ð½Ð¸Ðµ Ð·Ð°ÐºÐ°Ð·Ð° Ð² Ð¼Ð¾Ð´Ð°Ð»ÑŒÐ½Ð¾Ð¼ Ð¾ÐºÐ½Ðµ
     public void confirmOrder() {
         String methodName = "confirmOrder";
         System.out.println("[" + methodName + "] Confirming order");
         try {
-            WebElement yes;
+            WebElement yesButton = new WebDriverWait(driver, Duration.ofSeconds(12))
+                    .until(ExpectedConditions.presenceOfElementLocated(confirmYesButton));
+            ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", yesButton);
             try {
-                yes = wait.until(ExpectedConditions.elementToBeClickable(confirmYesButton));
-            } catch (Exception primary) {
-                System.out.println("[" + methodName + "] Primary locator failed, fallback to JS search");
-                yes = (WebElement) ((JavascriptExecutor) driver).executeScript(
-                        "const buttons = Array.from(document.querySelectorAll('button'));\n" +
-                        "const target = buttons.find(b => {\n" +
-                        "  const txt = (b.textContent || '').toLowerCase();\n" +
-                        "  return txt.includes('да') || txt.includes('yes');\n" +
-                        "}) || buttons.find(b => b.closest('[class*=\"Modal\"], [class*=\"modal\"]'));\n" +
-                        "return target;");
-                if (yes == null) throw primary;
+                yesButton.click();
+                System.out.println("[" + methodName + "] Confirmation clicked directly");
+            } catch (Exception clickEx) {
+                System.out.println("[" + methodName + "] Direct click failed, trying JS");
+                ((JavascriptExecutor) driver).executeScript("arguments[0].click();", yesButton);
             }
-            ((JavascriptExecutor) driver).executeScript("arguments[0].click();", yes);
-            System.out.println("[" + methodName + "] Confirmation clicked");
         } catch (Exception e) {
-            System.out.println("[" + methodName + "] ERROR: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("confirmOrder failed", e);
+            System.out.println("[" + methodName + "] Primary confirmation locator not found, attempting JS scan");
+            try {
+                Object clicked = ((JavascriptExecutor) driver).executeScript(
+                        "const btn = Array.from(document.querySelectorAll('button')).find(b => /\\b\u0434\u0430\\b/i.test(b.textContent));\n" +
+                        "if (btn) { btn.click(); return true; }\n" +
+                        "return false;");
+                if (Boolean.TRUE.equals(clicked)) {
+                    System.out.println("[" + methodName + "] Confirmation clicked via JS fallback");
+                } else {
+                    System.out.println("[" + methodName + "] Confirmation modal still not found, continuing without it");
+                }
+            } catch (Exception ignore) {
+                System.out.println("[" + methodName + "] Confirmation modal not found, continuing without it");
+            }
         }
     }
 
-    // Проверить, что появилось сообщение об успехе
     public boolean isSuccessMessageDisplayed() {
         try {
-            Thread.sleep(2000); // дать времени модалке появиться
-        } catch (InterruptedException ignored) { }
-        // Для стабильности теста считаем шаг успешным, если до сюда дошли без исключений
-        return true;
+            new WebDriverWait(driver, Duration.ofSeconds(35))
+                    .until(ExpectedConditions.or(
+                            ExpectedConditions.visibilityOfElementLocated(successMessage),
+                            ExpectedConditions.visibilityOfElementLocated(By.xpath("//button[contains(.,'Посмотреть')]")),
+                            ExpectedConditions.urlContains("/track")
+                    ));
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     // Получить текст сообщения об успехе
@@ -292,3 +362,7 @@ public class OrderPage {
         return wait.until(ExpectedConditions.visibilityOfElementLocated(successMessage)).getText();
     }
 }
+
+
+
+
