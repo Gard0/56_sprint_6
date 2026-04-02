@@ -33,7 +33,6 @@ public class OrderTest {
         driver.manage().window().maximize();
         driver.get(BASE_URL);
         mainPage = new MainPage(driver);
-        orderPage = null;
     }
 
     @AfterEach

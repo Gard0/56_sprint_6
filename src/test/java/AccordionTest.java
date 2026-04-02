@@ -30,7 +30,7 @@ public class AccordionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 1, 2, 3})
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5, 6, 7})
     public void testAccordionItemOpening(int itemIndex) {
         // Нажать на элемент аккордиона
         mainPage.clickAccordionItem(itemIndex);
@@ -40,21 +40,4 @@ public class AccordionTest {
                 "Аккордион элемент " + itemIndex + " должен открываться");
     }
 
-    @Test
-    public void testFirstAccordionItemOpens() {
-        // Нажать на первый элемент аккордиона
-        mainPage.clickAccordionItem(0);
-
-        // Проверить видимость текста
-        assertTrue(mainPage.isAccordionTextVisible(), "Первый элемент аккордиона должен открыться");
-    }
-
-    @Test
-    public void testSecondAccordionItemOpens() {
-        // Нажать на второй элемент аккордиона
-        mainPage.clickAccordionItem(1);
-
-        // Проверить видимость текста
-        assertTrue(mainPage.isAccordionTextVisible(), "Второй элемент аккордиона должен открыться");
-    }
 }
